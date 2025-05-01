@@ -18,7 +18,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Replace with your actual remove.bg API key
-REMOVE_BG_API_KEY = "xXnM9Pw4FT9hjs1QnMXKWi34"
+REMOVE_BG_API_KEY = "Your Background Remover API Here"
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handles the /start command."""
@@ -75,7 +75,7 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 async def main() -> None:
     # Replace with your actual Telegram bot token from BotFather
-    TELEGRAM_BOT_TOKEN = "7898234424:AAHZvgmSAGoFNIzEKdEvhYH_xKAk1VZfYbk"
+    TELEGRAM_BOT_TOKEN = "Your telegram bot TOKEN here"
     
     logger.info("Initializing bot")
     app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
