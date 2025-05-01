@@ -1,0 +1,98 @@
+ Transpic_Bot
+import nest_asyncio
+nest_asyncio.apply()
+
+import io
+import logging
+import requests
+import asyncio
+
+from telegram import Update
+from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters
+
+# Set up logging so we can see what's happening
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
+logger = logging.getLogger(__name__)
+
+# Replace with your actual remove.bg API key
+REMOVE_BG_API_KEY = "xXnM9Pw4FT9hjs1QnMXKWi34"
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handles the /start command."""
+    logger.info("Received /start command")
+    await update.message.reply_text(
+        "Welcome to Transpic_Bot!\n\n"
+        "Send me an image, and I'll remove its background using the remove.bg API."
+    )
+
+def remove_bg(image_bytes: bytes) -> bytes:
+    """
+    Calls the remove.bg API to remove the background.
+    Returns the processed image bytes if successful, otherwise None.
+    """
+    url = "https://api.remove.bg/v1.0/removebg"
+    headers = {"X-Api-Key": REMOVE_BG_API_KEY}
+    files = {"image_file": ("image.png", image_bytes)}
+    data = {"size": "auto"}
+    
+    response = requests.post(url, headers=headers, files=files, data=data)
+    if response.status_code == 200:
+        logger.info("remove.bg API call successful")
+        return response.content
+    else:
+        logger.error(f"remove.bg API error {response.status_code}: {response.text}")
+        return None
+
+async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Processes photos sent to the bot."""
+    logger.info("Received a photo")
+    if not update.message.photo:
+        logger.warning("No photo found in the update")
+        return
+
+    # Get the highest resolution photo
+    photo = update.message.photo[-1]
+    file = await context.bot.get_file(photo.file_id)
+    image_bytes = await file.download_as_bytearray()
+    logger.info("Photo downloaded as bytearray")
+    
+    await update.message.reply_text("Processing your image, please wait...")
+    
+    # Process the image using the remove.bg API
+    processed_image = remove_bg(image_bytes)
+    if processed_image:
+        bio = io.BytesIO(processed_image)
+        bio.name = "result.png"
+        bio.seek(0)
+        logger.info("Sending the processed image")
+        await update.message.reply_document(document=bio, filename="result.png")
+    else:
+        logger.error("Image processing failed")
+        await update.message.reply_text("Sorry, I couldn't process the image. Please try again later!")
+
+async def main() -> None:
+    # Replace with your actual Telegram bot token from BotFather
+    TELEGRAM_BOT_TOKEN = "7898234424:AAHZvgmSAGoFNIzEKdEvhYH_xKAk1VZfYbk"
+    
+    logger.info("Initializing bot")
+    app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
+    
+    # Add handlers for /start and photos
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
+    
+    # Try to delete any existing webhook and drop pending updates.
+    try:
+        await app.bot.delete_webhook(drop_pending_updates=True)
+    except Exception as e:
+        logger.warning(f"Failed to delete webhook: {e}")
+    
+    logger.info("Bot is now polling. Send /start to the bot on Telegram.")
+    await app.run_polling(drop_pending_updates=True)
+
+if __name__ == "__main__":
+    asyncio.run(main())
+
